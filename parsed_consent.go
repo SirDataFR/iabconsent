@@ -47,6 +47,12 @@ func (p *ParsedConsent) EveryPurposeAllowed(ps []int) bool {
 	return true
 }
 
+// PurposeAllowed returns true if the purpose number exists in the ParsedConsent and is true,
+// otherwise false
+func (p *ParsedConsent) PurposeAllowed(v int) bool {
+	return p.PurposesAllowed[v]
+}
+
 // VendorAllowed returns true if the ParsedConsent contains affirmative consent
 // for VendorID v.
 func (p *ParsedConsent) VendorAllowed(v int) bool {
@@ -60,6 +66,10 @@ func (p *ParsedConsent) VendorAllowed(v int) bool {
 	}
 
 	return p.ConsentedVendors[v]
+}
+
+func (p *ParsedConsent) ToConsentString() string {
+	return Format(p)
 }
 
 // RangeEntry defines an inclusive range of vendor IDs from StartVendorID to

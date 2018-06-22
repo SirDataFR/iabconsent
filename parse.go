@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"time"
-
-	"github.com/rupertchen/go-bits"
 )
 
 const (
@@ -16,35 +14,42 @@ const (
 )
 
 // ConsentReader provides additional Consent String-specific bit-reading
-// functionality on top of bits.Reader.
+// functionality on top of Bits.
 type ConsentReader struct {
-	*bits.Reader
+	*Bits
 }
 
 // NewConsentReader returns a new ConsentReader backed by src.
 func NewConsentReader(src []byte) *ConsentReader {
-	return &ConsentReader{bits.NewReader(bits.NewBitmap(src))}
-}
-
-// ReadInt reads the next n bits and converts them to an int.
-func (r *ConsentReader) ReadInt(n uint) int {
-	return int(r.ReadBits(n))
+	return &ConsentReader{NewBits(src)}
 }
 
 // ReadTime reads the next 36 bits representing the epoch time in deciseconds
 // and converts it to a time.Time.
 func (r *ConsentReader) ReadTime() time.Time {
-	var ds = int64(r.ReadBits(36))
+	var ds = int64(r.ReadInt(36))
 	return time.Unix(ds/dsPerS, (ds%dsPerS)*nsPerDs).UTC()
+}
+
+// WriteTime writes the value v in the next 36 bits
+func (r *ConsentReader) WriteTime(v time.Time) {
+	r.WriteNumber(v.UnixNano()/nsPerDs, 36)
 }
 
 // ReadString returns a string of length n by reading the next 6 * n bits.
 func (r *ConsentReader) ReadString(n uint) string {
 	var buf = make([]byte, 0, n)
 	for i := uint(0); i < n; i++ {
-		buf = append(buf, byte(r.ReadBits(6))+'A')
+		buf = append(buf, byte(r.ReadInt(6))+'A')
 	}
 	return string(buf)
+}
+
+// WriteString writes the value v in the len(v)* 6 next bits
+func (b *Bits) WriteString(v string) {
+	for _, char := range v {
+		b.WriteInt(int(byte(char)-'A'), 6)
+	}
 }
 
 // ReadBitField reads the next n bits and converts them to a map[int]bool.
@@ -58,6 +63,7 @@ func (r *ConsentReader) ReadBitField(n uint) map[int]bool {
 	return m
 }
 
+// ReadRangeEntries reads the next n bits and converts them to a []*RangeEntry
 func (r *ConsentReader) ReadRangeEntries(n uint) []*RangeEntry {
 	var ret = make([]*RangeEntry, 0, n)
 	for i := uint(0); i < n; i++ {
@@ -120,4 +126,66 @@ func Parse(s string) (p *ParsedConsent, err error) {
 	}
 
 	return p, nil
+}
+
+// Format takes a ParsedConsent and returns the base64 Raw URL Encoded string
+//
+// Example Usage:
+//
+//   var cs = iabconsent.Format("BONJ5bvONJ5bvAMAPyFRAL7AAAAMhuqKklS-gAAAAAAAAAAAAAAAAAAAAAAAAAA")
+func Format(p *ParsedConsent) string {
+	bitSize := 173 + p.MaxVendorID - 1
+
+	if p.IsRangeEncoding {
+		rangeEntrySize := 0
+		for _, rangeEntry := range p.RangeEntries {
+			if rangeEntry.StartVendorID == rangeEntry.EndVendorID {
+				rangeEntrySize += 16
+			} else {
+				rangeEntrySize += 16 * 2
+			}
+		}
+
+		bitSize = 186 + rangeEntrySize
+	}
+
+	var r = NewConsentReader(make([]byte, bitSize/8))
+	if bitSize%8 != 0 {
+		r = NewConsentReader(make([]byte, bitSize/8+1))
+	}
+
+	r.WriteInt(p.Version, 6)
+	r.WriteTime(p.Created)
+	r.WriteTime(p.LastUpdated)
+	r.WriteInt(p.CMPID, 12)
+	r.WriteInt(p.CMPVersion, 12)
+	r.WriteInt(p.ConsentScreen, 6)
+	r.WriteString(p.ConsentLanguage)
+	r.WriteInt(p.VendorListVersion, 12)
+	for i := 0; i < 24; i++ {
+		r.WriteBool(p.PurposeAllowed(i + 1))
+	}
+	r.WriteInt(p.MaxVendorID, 16)
+
+	r.WriteBool(p.IsRangeEncoding)
+	if p.IsRangeEncoding {
+		r.WriteBool(p.DefaultConsent)
+		r.WriteInt(p.NumEntries, 12)
+		for _, entry := range p.RangeEntries {
+			if entry.EndVendorID > entry.StartVendorID {
+				r.WriteBool(true)
+				r.WriteInt(entry.StartVendorID, 16)
+				r.WriteInt(entry.EndVendorID, 16)
+			} else {
+				r.WriteBool(false)
+				r.WriteInt(entry.StartVendorID, 16)
+			}
+		}
+	} else {
+		for i := 0; i < p.MaxVendorID; i++ {
+			r.WriteBool(p.VendorAllowed(i + 1))
+		}
+	}
+
+	return base64.RawURLEncoding.EncodeToString(r.bytes)
 }
