@@ -134,7 +134,7 @@ func Parse(s string) (p *ParsedConsent, err error) {
 //
 //   var cs = iabconsent.Format("BONJ5bvONJ5bvAMAPyFRAL7AAAAMhuqKklS-gAAAAAAAAAAAAAAAAAAAAAAAAAA")
 func Format(p *ParsedConsent) string {
-	bitSize := 173 + p.MaxVendorID - 1
+	bitSize := 173 + p.MaxVendorID
 
 	if p.IsRangeEncoding {
 		rangeEntrySize := 0
