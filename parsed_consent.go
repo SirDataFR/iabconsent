@@ -15,6 +15,7 @@ package iabconsent
 
 import (
 	"time"
+	"fmt"
 )
 
 // ParsedConsent represents data extracted from an IAB Consent String, v1.1.
@@ -70,6 +71,15 @@ func (p *ParsedConsent) VendorAllowed(v int) bool {
 
 func (p *ParsedConsent) ToConsentString() string {
 	return Format(p)
+}
+
+func (p *ParsedConsent) ToString() string {
+	return fmt.Sprintf("Version=%v, Created=%v, LastUpdated=%v, CMPID=%v, CMPVersion=%v," +
+		" ConsentScreen=%v, ConsentLanguage=%v, VendorListVersion=%v, PurposesAllowed=%v," +
+		" MaxVendorID=%v, IsRangeEncoding=%v, ConsentedVendors=%v, RangeEntries=%v, DefaultConsent=%v",
+		p.Version, p.Created, p.LastUpdated, p.CMPID, p.CMPVersion,
+		p.ConsentScreen, p.ConsentLanguage, p.VendorListVersion, p.PurposesAllowed,
+		p.MaxVendorID, p.IsRangeEncoding, p.ConsentedVendors, p.RangeEntries, p.DefaultConsent)
 }
 
 // RangeEntry defines an inclusive range of vendor IDs from StartVendorID to

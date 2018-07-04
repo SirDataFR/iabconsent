@@ -143,6 +143,11 @@ func (p *FormatConsentSuite) TestFormatConsents(c *check.C) {
 	}
 }
 
+func (p *FormatConsentSuite) TestParse(c *check.C) {
+	_, err := Parse("BOOd8eCOPpnYYAKABCFRBCAAAAAcQAAAgAAYEBAUKgCAwAA0KAAIABABAiAAgQ1AxAbIeGiiAAQugCFAYABAAAAADAECAAAAQFBiA6OGgA")
+	c.Check(err, check.IsNil)
+}
+
 func timeFromDs(deciseconds int64) time.Time {
 	return time.Unix(deciseconds/10, (deciseconds%10)*int64(time.Millisecond*100)).UTC()
 }
