@@ -137,12 +137,12 @@ func Format(p *ParsedConsent) string {
 	bitSize := 173 + p.MaxVendorID
 
 	if p.IsRangeEncoding {
-		rangeEntrySize := 0
-		for _, rangeEntry := range p.RangeEntries {
-			if rangeEntry.StartVendorID == rangeEntry.EndVendorID {
-				rangeEntrySize += 16
-			} else {
+		rangeEntrySize := len(p.RangeEntries)
+		for _, entry := range p.RangeEntries {
+			if entry.EndVendorID > entry.StartVendorID {
 				rangeEntrySize += 16 * 2
+			} else {
+				rangeEntrySize += 16
 			}
 		}
 
