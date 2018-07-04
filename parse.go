@@ -170,7 +170,7 @@ func Format(p *ParsedConsent) string {
 	r.WriteBool(p.IsRangeEncoding)
 	if p.IsRangeEncoding {
 		r.WriteBool(p.DefaultConsent)
-		r.WriteInt(p.NumEntries, 12)
+		r.WriteInt(len(p.RangeEntries), 12)
 		for _, entry := range p.RangeEntries {
 			if entry.EndVendorID > entry.StartVendorID {
 				r.WriteBool(true)
